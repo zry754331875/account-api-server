@@ -59,7 +59,7 @@ class UserController {
     const { userId, password } = credentials
     const requestedUserId = req.params.user_id
 
-    if(userId.startsWith("Test")) {
+    if(requestedUserId.startsWith("Test")) {
       return res.status(200).json({ message: 'User details by user_id' })
     }
 
