@@ -4,6 +4,13 @@
 class UserModel {
   constructor() {
     this.users = new Map() // ユーザーデータを保存するためのMapオブジェクト
+
+    this.users.set('TaroYamada', {
+      user_id: 'TaroYamada',
+      password: 'PaSSwd4TY',
+      nickname: 'たろー',
+      comment: '僕は元気です',
+    })
   }
 
   /**
