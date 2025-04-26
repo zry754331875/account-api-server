@@ -1,60 +1,134 @@
-// controllers/userController.js
-const userModel = require('../models/user');
+const UserModel = require('../models/user')
 
-// ログイン処理
-function login(req, res) {
-  const { user_id, password } = req.body;
-  if (!user_id || !password) {
-    return res.status(400).json({ message: 'user_idとpasswordは必須です' });
+/**
+ * コントローラー: リクエストを処理しレスポンスを返す
+ */
+class UserController {
+  constructor() {
+    this.userModel = new UserModel()
   }
-  const success = userModel.login(user_id, password);
-  if (success) {
-    return res.json({ message: 'ログイン成功' });
-  } else {
-    return res.status(401).json({ message: 'ログイン失敗' });
+
+  /**
+   * Basic認証のヘッダーからユーザーIDとパスワードを抽出する
+   * @param {string} authHeader - Authorization ヘッダー
+   * @returns {Object} - ユーザーIDとパスワード
+   */
+  extractCredentials(authHeader) {
+    // Authorization ヘッダーが存在するか確認
+    if (!authHeader || !authHeader.startsWith('Basic ')) {
+      return null
+    }
+
+    try {
+      // Basic認証の値をデコード
+      const base64Credentials = authHeader.split(' ')[1]
+      const credentials = Buffer.from(base64Credentials, 'base64').toString('utf8')
+      const [userId, password] = credentials.split(':')
+
+      return { userId, password }
+    } catch (error) {
+      return null
+    }
+  }
+
+  /**
+   * ユーザーアカウント作成のリクエストを処理する
+   * @param {Object} req - リクエストオブジェクト
+   * @param {Object} res - レスポンスオブジェクト
+   */
+  signup(req, res) {
+    const { user_id, password, nickname, comment } = req.body
+
+    const result = this.userModel.createUser(user_id, password, nickname, comment)
+
+    res.status(result.code).json({
+      message: result.message,
+      ...(result.cause ? { cause: result.cause } : {}),
+      ...(result.user ? { user: result.user } : {}),
+    })
+  }
+
+  /**
+   * ユーザー情報取得のリクエストを処理する
+   * @param {Object} req - リクエストオブジェクト
+   * @param {Object} res - レスポンスオブジェクト
+   */
+  getUser(req, res) {
+    const authHeader = req.headers.authorization
+    const credentials = this.extractCredentials(authHeader)
+
+    if (!credentials) {
+      return res.status(401).json({ message: 'Authentication Failed' })
+    }
+
+    const { userId, password } = credentials
+    const requestedUserId = req.params.user_id
+
+    // 認証されたユーザーIDとリクエストされたユーザーIDが一致するか確認
+    if (userId !== requestedUserId) {
+      return res.status(403).json({ message: 'No Permission for Update' })
+    }
+
+    const result = this.userModel.getUser(userId, password)
+
+    res.status(result.code).json({
+      message: result.message,
+      ...(result.user ? { user: result.user } : {}),
+    })
+  }
+
+  /**
+   * ユーザー情報更新のリクエストを処理する
+   * @param {Object} req - リクエストオブジェクト
+   * @param {Object} res - レスポンスオブジェクト
+   */
+  updateUser(req, res) {
+    const authHeader = req.headers.authorization
+    const credentials = this.extractCredentials(authHeader)
+
+    if (!credentials) {
+      return res.status(401).json({ message: 'Authentication Failed' })
+    }
+
+    const { userId, password } = credentials
+    const requestedUserId = req.params.user_id
+    const { nickname, comment } = req.body
+
+    // 認証されたユーザーIDとリクエストされたユーザーIDが一致するか確認
+    if (userId !== requestedUserId) {
+      return res.status(403).json({ message: 'No Permission for Update' })
+    }
+
+    const result = this.userModel.updateUser(userId, password, nickname, comment)
+
+    res.status(result.code).json({
+      message: result.message,
+      ...(result.cause ? { cause: result.cause } : {}),
+      ...(result.recipe ? { recipe: result.recipe } : {}),
+    })
+  }
+
+  /**
+   * ユーザーアカウント削除のリクエストを処理する
+   * @param {Object} req - リクエストオブジェクト
+   * @param {Object} res - レスポンスオブジェクト
+   */
+  deleteUser(req, res) {
+    const authHeader = req.headers.authorization
+    const credentials = this.extractCredentials(authHeader)
+
+    if (!credentials) {
+      return res.status(401).json({ message: 'Authentication Failed' })
+    }
+
+    const { userId, password } = credentials
+
+    const result = this.userModel.deleteUser(userId, password)
+
+    res.status(result.code).json({
+      message: result.message,
+    })
   }
 }
 
-// ユーザー情報取得
-function getUser(req, res) {
-  const { user_id } = req.params;
-  const user = userModel.getUser(user_id);
-  if (user) {
-    return res.json(user);
-  } else {
-    return res.status(404).json({ message: 'ユーザーが見つかりません' });
-  }
-}
-
-// ユーザー情報更新
-function updateUser(req, res) {
-  const { user_id } = req.params;
-  const { nickname, comment } = req.body;
-  const success = userModel.updateUser(user_id, { nickname, comment });
-  if (success) {
-    return res.json({ message: '更新成功' });
-  } else {
-    return res.status(404).json({ message: 'ユーザーが見つかりません' });
-  }
-}
-
-// ユーザー削除
-function deleteUser(req, res) {
-  const { user_id } = req.body;
-  if (!user_id) {
-    return res.status(400).json({ message: 'user_idは必須です' });
-  }
-  const success = userModel.deleteUser(user_id);
-  if (success) {
-    return res.json({ message: '削除成功' });
-  } else {
-    return res.status(404).json({ message: 'ユーザーが見つかりません' });
-  }
-}
-
-module.exports = {
-  login,
-  getUser,
-  updateUser,
-  deleteUser,
-};
+module.exports = UserController;

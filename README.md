@@ -7,7 +7,6 @@
 - Model: `models/user.js`
 - View: （APIレスポンスを通じてJSONで提供）
 - Controller: `controllers/userController.js`
-- Route: `routes/userRoutes.js`
 - Entry Point: `index.js`
 
 ## テスト用アカウント
